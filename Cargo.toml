@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "da14531-sdk-macros"
+version = "0.1.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro-error = "1.0"
+quote = "1.0.18"
+syn = {version = "1.0.92", features = ["full", "extra-traits", "parsing", "derive"]}
+proc-macro2 = "1.0.38"
