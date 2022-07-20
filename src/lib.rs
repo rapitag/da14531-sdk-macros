@@ -77,8 +77,6 @@ pub fn register_app_callbacks(input: TokenStream) -> TokenStream {
     let callbacks = parse_macro_input!(input as AppCallbacks);
     let x = callbacks.generate();
 
-    std::fs::write("/home/harry/output.rs", x.to_string()).unwrap();
-
     x.into()
 }
 
