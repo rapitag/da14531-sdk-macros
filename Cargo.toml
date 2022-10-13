@@ -4,7 +4,7 @@ categories = [
   "hardware-support",
   "no-std",
 ]
-description = "HAL crate for the DA14531 microcontroller"
+description = "DA14531 SDK macros for Rust"
 documentation = "https://docs.rs/da14531-sdk-macros"
 edition = "2021"
 keywords = [
@@ -18,7 +18,7 @@ name = "da14531-sdk-macros"
 readme = "README.md"
 repository = "https://github.com/rapitag/da14531-sdk-macros"
 rust-version = "1.60"
-version = "0.1.0"
+version = "0.1.1"
 
 [lib]
 proc-macro = true
