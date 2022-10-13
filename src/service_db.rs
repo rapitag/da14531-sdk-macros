@@ -1,12 +1,8 @@
 use std::fmt::Debug;
 
-use proc_macro::TokenStream;
-use proc_macro_error::{proc_macro_error, ResultExt};
+use proc_macro_error::ResultExt;
 use quote::quote;
-use syn::{
-    braced, parse::Parse, parse_macro_input, punctuated::Punctuated, Expr, FieldValue, Lit, Member,
-    Token,
-};
+use syn::{braced, parse::Parse, punctuated::Punctuated, Expr, FieldValue, Lit, Member, Token};
 
 pub enum EntryType {
     Service,
