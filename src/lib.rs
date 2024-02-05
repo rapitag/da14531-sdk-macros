@@ -1,12 +1,14 @@
+mod app_callbacks;
+mod app_diss;
+mod default_handlers_configuration;
+mod main_loop_callbacks;
+mod service_db;
+
+use app_diss::DeviceInformationServiceConfiguration;
 use proc_macro::TokenStream;
 use proc_macro_error::proc_macro_error;
 use quote::quote;
 use syn::parse_macro_input;
-
-mod app_callbacks;
-mod default_handlers_configuration;
-mod main_loop_callbacks;
-mod service_db;
 
 use app_callbacks::AppCallbacks;
 use default_handlers_configuration::DefaultHandlersConfiguration;
@@ -83,6 +85,13 @@ pub fn register_app_callbacks(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn default_handlers_configuration(input: TokenStream) -> TokenStream {
     let config = parse_macro_input!(input as DefaultHandlersConfiguration);
+
+    config.generate().into()
+}
+
+#[proc_macro]
+pub fn configure_device_information_service(input: TokenStream) -> TokenStream {
+    let config = parse_macro_input!(input as DeviceInformationServiceConfiguration);
 
     config.generate().into()
 }
