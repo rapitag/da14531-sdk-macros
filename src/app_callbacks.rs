@@ -549,8 +549,9 @@ impl AppCallbacks {
         if let Some(app_on_generate_static_random_addr) = &self.app_on_generate_static_random_addr {
             callback_wrappers.push(quote!(
                 #[no_mangle]
-                pub extern "C" fn __app_on_generate_static_random_addr() {
-                    #app_on_generate_static_random_addr();
+                pub extern "C" fn __app_on_generate_static_random_addr(addr: *mut da14531_sdk::platform::core_modules::common::BDAddr) {
+                    let addr_ref = unsafe {&mut *addr};
+                    #app_on_generate_static_random_addr(addr_ref);
                 }
             ));
             struct_fields.push(quote!(

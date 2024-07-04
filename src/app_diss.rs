@@ -347,7 +347,6 @@ impl DeviceInformationServiceConfiguration {
 
                     let db_cfg = unsafe { db_cfg_ptr.as_mut().unwrap() };
 
-                    // TODO: Make user configurable!
                     db_cfg.features = 0;
 
                     #(#supported_chars)*
