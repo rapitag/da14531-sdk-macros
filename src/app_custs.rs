@@ -6,7 +6,7 @@ use std::{
 
 use indexmap::IndexMap;
 use proc_macro2::{Group, Ident, Span};
-use quote::{quote, ToTokens, TokenStreamExt};
+use quote::{format_ident, quote, ToTokens, TokenStreamExt};
 use syn::{
     parse::{discouraged::Speculative, Parse, ParseStream, Parser},
     punctuated::Punctuated,
@@ -105,8 +105,17 @@ impl Permissions {
     pub fn is_readable(&self) -> bool {
         self.read != PermissionVariants::Disabled
     }
+
     pub fn is_writable(&self) -> bool {
         self.write != PermissionVariants::Disabled
+    }
+
+    pub fn has_indication(&self) -> bool {
+        self.indication != PermissionVariants::Disabled
+    }
+
+    pub fn has_notification(&self) -> bool {
+        self.notification != PermissionVariants::Disabled
     }
 }
 
@@ -663,7 +672,7 @@ impl CustomServer1ServiceConfiguration {
                     }
                 ));
                 self.char_idx_map
-                    .insert(characteristic.name.clone(), records.len());
+                    .insert(characteristic.name.to_uppercase(), records.len());
                 if perm.is_readable() {
                     if let Some(read_handler) = &characteristic.read_handler {
                         self.read_handlers
@@ -705,7 +714,28 @@ impl CustomServer1ServiceConfiguration {
                     }
                 ));
 
+                if perm.has_indication() {
+                    let mut indication_cccd_permission = Permissions::default();
+
+                    indication_cccd_permission.read = PermissionVariants::Enabled;
+                    indication_cccd_permission.write = PermissionVariants::Enabled;
+                    indication_cccd_permission.write_request_accepted = true;
+
+                    records.push(quote!(
+                        da14531_sdk::ble_stack::host::att::attm::AttmDesc128 {
+                            uuid: &da14531_sdk::ble_stack::host::att::ATT_DESC_CLIENT_CHAR_CFG
+                                as *const _ as *const u8,
+                            uuid_size: da14531_sdk::ble_stack::host::att::ATT_UUID_16_LEN as u8,
+                            perm: #indication_cccd_permission,
+                            max_length: 0,
+                            length: 0,
+                            value: core::ptr::null(),
+                        }
+                    ));
+                }
+
                 if let Some(user_description) = &characteristic.user_description {
+                    let user_description = &user_description[1..(user_description.len() - 1)];
                     let user_description = user_description.as_bytes();
                     let user_description_len = user_description.len() as u16;
                     records.push(quote!(
@@ -731,6 +761,19 @@ impl CustomServer1ServiceConfiguration {
         let record_count_u8 = record_count as u8;
         let service_idxs = &self.service_idxs;
         let services_len = service_idxs.len();
+
+        let char_idx_map: Vec<_> = self
+            .char_idx_map
+            .iter()
+            .map(|(name, value)| {
+                let name = format_ident!("CHAR_{name}_HANDLE");
+                let value = *value as u16;
+                quote!(
+                    pub const #name: u16 = #value;
+                )
+            })
+            .collect();
+
         Ok(quote!(
             #[export_name = "custs1_att_db"]
             pub(crate) static CUSTS1_ATT_DB: [da14531_sdk::ble_stack::host::att::attm::AttmDesc128;
@@ -743,7 +786,9 @@ impl CustomServer1ServiceConfiguration {
             #[export_name = "custs1_services_size"]
             static CUSTS1_SERVICES_SIZE: u32 = #services_len as u32;
 
-
+            pub mod char_idx_map {
+                #(#char_idx_map)*
+            }
 
             /// Setup custom profile funcs
             #[no_mangle]
@@ -814,14 +859,6 @@ impl CustomServer1ServiceConfiguration {
                 dest_id: da14531_sdk::platform::core_modules::ke::task::KeTaskId,
                 src_id: da14531_sdk::platform::core_modules::ke::task::KeTaskId,
             ) {
-                // rtt_target::rprintln!(
-                //     "user_catch_rest_hndl({}, {:p}, {}, {})",
-                //     msg_id,
-                //     param,
-                //     dest_id,
-                //     src_id
-                // );
-
                 match msg_id as u32 {
                     da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_VAL_WRITE_IND => {
                         let param = param as *const da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::Custs1ValWriteInd;
@@ -831,22 +868,6 @@ impl CustomServer1ServiceConfiguration {
                             _ => {}
                         }
                     }
-                    // da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_VAL_NTF_CFM => {
-                    //     rprintln!("CUSTS1_VAL_NTF_CFM");
-                    //     let param = param as *const Custs1ValNtfCfm;
-                    //     let param = unsafe { *param };
-                    //     match param.handle {
-                    //         _ => {}
-                    //     }
-                    // }
-                    // da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_VAL_IND_CFM => {
-                    //     rprintln!("CUSTS1_VAL_IND_CFM");
-                    //     let param = param as *const Custs1ValIndCfm;
-                    //     let param = unsafe { *param };
-                    //     match param.handle {
-                    //         _ => {}
-                    //     }
-                    // }
                     da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_ATT_INFO_REQ => {
                         let param = param as *const da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::Custs1AttInfoReq;
                         let param = unsafe { &*param };
@@ -900,14 +921,30 @@ impl CustomServer1ServiceConfiguration {
                             }
                         }
                     }
-                    da14531_sdk::ble_stack::host::gap::gapc::task::GAPC_PARAM_UPDATED_IND => {
-                        // let param = param as *const da14531_sdk::ble_stack::host::gap::gapc::task::GapcParamUpdatedInd;
-                        // let param = unsafe { &*param };
-                        // let con_interval = param.con_interval;
-                        // let con_latency = param.con_latency;
-                        // let sup_to = param.sup_to;
-                    }
                     _ => {}
+                    // da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_VAL_NTF_CFM => {
+                    //     rprintln!("CUSTS1_VAL_NTF_CFM");
+                    //     let param = param as *const Custs1ValNtfCfm;
+                    //     let param = unsafe { *param };
+                    //     match param.handle {
+                    //         _ => {}
+                    //     }
+                    // }
+                    // da14531_sdk::ble_stack::profiles::custom::custs::custs1::task::CUSTS1_VAL_IND_CFM => {
+                    //     rprintln!("CUSTS1_VAL_IND_CFM");
+                    //     let param = param as *const Custs1ValIndCfm;
+                    //     let param = unsafe { *param };
+                    //     match param.handle {
+                    //         _ => {}
+                    //     }
+                    // }
+                    // da14531_sdk::ble_stack::host::gap::gapc::task::GAPC_PARAM_UPDATED_IND => {
+                    //     let param = param as *const da14531_sdk::ble_stack::host::gap::gapc::task::GapcParamUpdatedInd;
+                    //     let param = unsafe { &*param };
+                    //     let con_interval = param.con_interval;
+                    //     let con_latency = param.con_latency;
+                    //     let sup_to = param.sup_to;
+                    // }
                 }
             }
         ))
