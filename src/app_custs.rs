@@ -792,11 +792,11 @@ impl CustomServer1ServiceConfiguration {
 
             /// Setup custom profile funcs
             #[no_mangle]
-            pub static CUST_PRF_FUNCS: [CustPrfFuncCallbacks; 1] = [CustPrfFuncCallbacks {
-                task_id: TASK_ID_CUSTS1,
+            pub static CUST_PRF_FUNCS: [da14531_sdk::app_modules::app_custs::CustPrfFuncCallbacks; 1] = [da14531_sdk::app_modules::app_custs::CustPrfFuncCallbacks {
+                task_id: da14531_sdk::platform::core_modules::rwip::TASK_ID_CUSTS1,
                 att_db: &CUSTS1_ATT_DB as *const _ as *const da14531_sdk::bindings::attm_desc_128,
                 max_nb_att: CUSTS1_ATT_DB_LEN,
-                db_create_func: Some(app_custs1_create_db),
+                db_create_func: Some(da14531_sdk::app_modules::app_custs::custs1::app_custs1_create_db),
                 enable_func: None,
                 init_func: None,
                 value_wr_validation_func: None,
